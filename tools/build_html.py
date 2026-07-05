@@ -126,6 +126,10 @@ BODY = """<style>
 <script>__BUNDLE__</script>
 """
 
+# a literal "</script" inside the bundle would terminate the inline script tag;
+# escaping it as "<\/script" is semantically identical inside JS strings/regex
+# (base64 cannot contain "<", so the GLB payload needs no such treatment)
+bundle = bundle.replace("</script", "<\\/script")
 body = BODY.replace("__GLB__", glb_b64).replace("__BUNDLE__", bundle)
 
 frag = "<title>7F 디지털 트윈 뷰어</title>\n" + body

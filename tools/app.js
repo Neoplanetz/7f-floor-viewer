@@ -8,9 +8,24 @@ const GROUND = 0xeef0f3;
 const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 const app = document.getElementById("stage");
-const renderer = new THREE.WebGLRenderer({ antialias: true, logarithmicDepthBuffer: true });
-// log depth: the floor overlays sit 1.5-2.5 mm above the terrazzo; a linear
-// buffer with near=0.1 z-fights them beyond ~40 m viewing distance.
+
+function fail(msg, err) {
+  const el = document.querySelector("#loading .msg");
+  if (el) el.textContent = msg;
+  const pulse = document.querySelector("#loading .pulse");
+  if (pulse) pulse.style.display = "none";
+  if (err) console.error(err);
+}
+
+let renderer;
+try {
+  renderer = new THREE.WebGLRenderer({ antialias: true, logarithmicDepthBuffer: true });
+  // log depth: the floor overlays sit 1.5-2.5 mm above the terrazzo; a linear
+  // buffer with near=0.1 z-fights them beyond ~40 m viewing distance.
+} catch (e) {
+  fail("이 브라우저에서 WebGL을 사용할 수 없습니다 — 다른 브라우저로 열어주세요.", e);
+  throw e;
+}
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.shadowMap.enabled = false;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -55,7 +70,15 @@ function b64ToBuf(b64) {
   return buf.buffer;
 }
 
-new GLTFLoader().parse(b64ToBuf(window.GLB_B64), "", (gltf) => {
+let glbBuf;
+try {
+  glbBuf = b64ToBuf(window.GLB_B64 || "");
+  if (!glbBuf.byteLength) throw new Error("empty GLB payload");
+} catch (e) {
+  fail("모델 데이터가 손상되었습니다 — 페이지를 새로고침해 주세요.", e);
+  throw e;
+}
+new GLTFLoader().parse(glbBuf, "", (gltf) => {
   const root = gltf.scene;
   root.traverse((o) => {
     if (o.isMesh) {
@@ -82,9 +105,7 @@ new GLTFLoader().parse(b64ToBuf(window.GLB_B64), "", (gltf) => {
   frame("oblique");
   document.getElementById("loading").remove();
 }, (err) => {
-  document.querySelector("#loading .msg").textContent =
-    "모델을 불러오지 못했습니다 — 브라우저를 새로고침해 주세요.";
-  console.error(err);
+  fail("모델을 불러오지 못했습니다 — 브라우저를 새로고침해 주세요.", err);
 });
 
 function resize() {
