@@ -8,7 +8,9 @@ const GROUND = 0xeef0f3;
 const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 const app = document.getElementById("stage");
-const renderer = new THREE.WebGLRenderer({ antialias: true });
+const renderer = new THREE.WebGLRenderer({ antialias: true, logarithmicDepthBuffer: true });
+// log depth: the floor overlays sit 1.5-2.5 mm above the terrazzo; a linear
+// buffer with near=0.1 z-fights them beyond ~40 m viewing distance.
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.shadowMap.enabled = false;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -17,11 +19,12 @@ app.appendChild(renderer.domElement);
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(GROUND);
 
-const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 2000);
+const camera = new THREE.PerspectiveCamera(50, 1, 0.8, 1200);
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = !reduced;
 controls.dampingFactor = 0.08;
 controls.maxPolarAngle = Math.PI / 2 - 0.02;   // never dip below the floor
+controls.minDistance = 3;
 
 const hemi = new THREE.HemisphereLight(0xffffff, 0xb8bcc4, 1.05);
 scene.add(hemi);
@@ -100,3 +103,5 @@ renderer.setAnimationLoop(() => {
   controls.update();
   renderer.render(scene, camera);
 });
+
+window.__v = { camera, controls, renderer };  // scripted-view hook for QA
